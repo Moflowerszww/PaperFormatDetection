@@ -870,7 +870,7 @@ namespace PaperFormatDetection.Paperbase
             if (colonP == 0)
             {
 
-                if (textAft.Substring(textAft.Length - 7).IndexOf("-") < 0 && textAft.Substring(textAft.Length - 7).IndexOf("~") < 0)
+                if (textAft.Substring(textAft.Length - 5).IndexOf("-") < 0 && textAft.Substring(textAft.Length - 5).IndexOf("~") < 0)
                 //既无：又无-的，认为是没有起止页
                 {
                     Util.printError("参考文献缺少起止页  ----" + fulltext.Substring(0, 10));
@@ -1220,7 +1220,7 @@ namespace PaperFormatDetection.Paperbase
         {
             Match match = Regex.Match(paraText, @"[1-2][0-9][0-9][0-9]");
             Match pause = Regex.Match(paraText, ",");
-
+            Match word = Regex.Match(paraText, "[A-Za-z\u4e00-\u9fa5]+");
             if (match.Success && pause.Index + 1 == match.Index && pause.Index != 0)
             {
                 int year = Convert.ToInt32(match.Value);
@@ -1229,30 +1229,6 @@ namespace PaperFormatDetection.Paperbase
                 {
                     Util.printError("参考文献出版年份超出当前年，不合法  ----" + fulltext.Substring(0, 10));
                 }
-
-
-                /*  if (paraText[match.Index - 1] != ',' && ((int)paraText[match.Index - 1] > 127 || Char.IsNumber(paraText[match.Index - 1])))
-                  {
-                      if (paraText[match.Index - 1] == '，')
-                          Util.printError("年份前标点符号不应为中文的：" + paraText);
-
-                      else
-                          Util.printError("年份前缺少标点符号‘,’：" + paraText);
-                  }
-
-                  else if (paraText[match.Index - 1] == ' ')
-                  {
-                      Util.printError("年份前不应有空格：" + paraText);
-                  }
-                  else
-                  {
-
-                      if (paraText[match.Index - 1] != ',')
-                      {
-                          Util.printError("年份前标点符号错误：" + paraText);
-
-                      }
-                  }*/
                 if (paraText[match.Index - 1] != ',' && ((int)paraText[match.Index - 1] > 127 || Char.IsNumber(paraText[match.Index - 1]) || Char.IsLetter(paraText[match.Index - 1])))
                 {
                     if (paraText[match.Index - 1] == '，')
@@ -1275,10 +1251,14 @@ namespace PaperFormatDetection.Paperbase
                 }
                 return match;
             }
-
+            else if (!word.Success)
+            {
+                Util.printError("参考文献缺少刊名   ----" + fulltext.Substring(0, 10));
+                return null;
+            }
             else
             {
-                Util.printError("参考文献缺少缺少刊名或出版年份   ----" + fulltext.Substring(0, 10));
+                Util.printError("参考文献缺少出版年份或年份前缺少英文逗号   ----" + fulltext.Substring(0, 10));
                 return null;
             }
         }
