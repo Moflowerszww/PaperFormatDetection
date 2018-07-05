@@ -60,7 +60,7 @@ namespace PaperFormatDetection.Paperbase
                 {
                     if (CovHeadline != "大连理工大学本科毕业设计（论文）")
                         Util.printError("论文类型" + "“" + CovHeadline + "”" + "错误，应为“大连理工大学本科毕业设计（论文）”");
-                    if (!(Util.getFullText(list[i]).Trim().Length - 16 == int.Parse(coverstyleHeadline[1]))) Util.printError("论文类型" + "“" + CovHeadline + "”" + "中间不应多余包含空格且不应该缺少字符");
+                    if (!(Util.getFullText(list[i]).Trim().Length - Util.getFullText(list[i]).Trim().Replace(" ", "").Length == 0)) Util.printError("论文类型" + "“" + CovHeadline + "”" + "每个字之间不应包含空格");
                     if (!Util.correctJustification(list[i], doc, coverstyleHeadline[2])) Util.printError("论文类型" + "“" + CovHeadline + "”" + "对齐方式错误，应为" + coverstyleHeadline[2]);
                     if (!Util.correctSpacingBetweenLines_line(list[i], doc, coverstyleHeadline[6])) Util.printError("论文类型" + "“" + CovHeadline + "”" + "行间距错误，应为" + Util.DSmap[coverstyleHeadline[6]]);
                     if (!Util.correctSpacingBetweenLines_Be(list[i], doc, coverstyleHeadline[7])) Util.printError("论文类型" + "“" + CovHeadline + "”" + "段前间距错误，应为0行");
@@ -127,9 +127,9 @@ namespace PaperFormatDetection.Paperbase
                     if (Util.getFullText(list[i]).Trim().Length != 0) break;
                     if (i >= list.Count) { YFlag = 1; break; };
                 }
-                //string CNorEn_SubtitleText = Util.getFullText(list[i]).Replace(" ", "");
-                //if (!((CNorEn_SubtitleText[0] >= 65 && CNorEn_SubtitleText[0] <= 90) || (CNorEn_SubtitleText[0] >= 97 && CNorEn_SubtitleText[0] <= 122)))
-                //    Util.printError("封面中文小标题中间不应该有转行");
+                string CNorEn_SubtitleText = Util.getFullText(list[i]).Replace(" ", "");
+                if (!((CNorEn_SubtitleText[0] >= 65 && CNorEn_SubtitleText[0] <= 90) || (CNorEn_SubtitleText[0] >= 97 && CNorEn_SubtitleText[0] <= 122)))
+                    Util.printError("封面中文小标题中间不应该有转行");
 
                 //封面英文小标题
                 string EnSubtitleString;
@@ -238,7 +238,7 @@ namespace PaperFormatDetection.Paperbase
                 string StuInformationString;
                 while (YFlag == 0)
                 {
-                    if ((Util.getFullText(list[i]).Trim().Length != 0 && (Util.getFullText(list[i]).Replace(" ", "").IndexOf("学院（系）") != -1 || Util.getFullText(list[i]).Replace(" ", "").IndexOf("专业") != -1 || Util.getFullText(list[i]).Replace(" ", "").IndexOf("学生姓名") != -1 || Util.getFullText(list[i]).Replace(" ", "").IndexOf("学号") != -1 || Util.getFullText(list[i]).Replace(" ", "").IndexOf("指导教师") != -1 || Util.getFullText(list[i]).Replace(" ", "").IndexOf("评阅教师") != -1 || Util.getFullText(list[i]).Replace(" ", "").IndexOf("完成日期") != -1))) break;
+                    if ((Util.getFullText(list[i]).Trim().Length != 0 && (Util.getFullText(list[i]).Replace(" ", "").IndexOf("学院") != -1 || Util.getFullText(list[i]).Replace(" ", "").IndexOf("专业") != -1 || Util.getFullText(list[i]).Replace(" ", "").IndexOf("学生姓名") != -1 || Util.getFullText(list[i]).Replace(" ", "").IndexOf("学号") != -1 || Util.getFullText(list[i]).Replace(" ", "").IndexOf("指导教师") != -1 || Util.getFullText(list[i]).Replace(" ", "").IndexOf("评阅教师") != -1 || Util.getFullText(list[i]).Replace(" ", "").IndexOf("完成日期") != -1))) break;
                     i++;
                     if (i >= list.Count) { YFlag = 1; break; };
                 }
