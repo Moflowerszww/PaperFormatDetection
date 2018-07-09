@@ -73,6 +73,19 @@ namespace PaperFormatDetection.Paperbase
         {
 
             Match match = Regex.Match(paraText.Substring(5), @"\[[A-Z]*(/OL)?\]");///////////有问题
+            Match tempM = match;
+            int index = 5;
+            //Util.printError(match.Index.ToString());
+            //while (tempM.Success)
+            //{
+            //    match = tempM;
+            //    index += tempM.Index + 3;
+            //    tempM = Regex.Match(paraText.Substring(index), @"\[[A-Z]*(/OL)?\]");
+            //    //Util.printError(tempM.Index.ToString()+ paraText.Substring(5 + tempM.Index + 3));
+
+            //}
+            //Util.printError(match.Index.ToString());
+
             // Console.WriteLine(match.Value);
             if (match.Success)
             {
@@ -341,6 +354,8 @@ namespace PaperFormatDetection.Paperbase
                     Util.printError("参考文献缺少编号  ----" + fulltext.Substring(0, 10));
                 }
             }
+
+            //参考文献类型检测，酌情添加对应类型的处理函数
             //处理结尾段落和下个部分标题段落在一个paragraph里边的情况
             if (fulltext.IndexOf("致谢") > 0)
             {
@@ -351,11 +366,9 @@ namespace PaperFormatDetection.Paperbase
             {
                 int index = fulltext.IndexOf("附录");
                 fulltext = fulltext.Substring(0, index);
-
+                //Util.printError(fulltext);
 
             }
-            //参考文献类型检测，酌情添加对应类型的处理函数
-
             switch (reftype)
             {
 
@@ -374,6 +387,7 @@ namespace PaperFormatDetection.Paperbase
                 case RefTypes.C_OL: checkRefType_online(fulltext, isCnRef, hasnum); break; //电子文献一种,标志为"[C/OL]"
                 case RefTypes.M_OL: checkRefType_online(fulltext, isCnRef, hasnum); break;//电子文献一种,标志为"[M/OL]",
                 case RefTypes.DB_OL: checkRefType_online(fulltext, isCnRef, hasnum); break;//电子文献一种,标志为"[M/OL]",
+
                 case RefTypes.Error:
                     {
                         Util.printError("参考文献标志代码错误  ----" + fulltext.Substring(0, 10));
@@ -392,12 +406,7 @@ namespace PaperFormatDetection.Paperbase
         unsafe public void checkRefType_M(string fulltext, bool isCnRef, bool hasnum)
         {
             bool hascom = false;//标记是否有：
-
-
             //  bool hasnum = hasNum(fulltext);
-
-
-
             string[] TextArr = Regex.Split(fulltext, @"\[\w*\]");//以[]为分隔符对内容进行划分
             string TextBefore = "";//存储编号之后，标志代码之前的内容
             string TextAfter = "";//存储标志代码之后的内容
@@ -422,21 +431,25 @@ namespace PaperFormatDetection.Paperbase
             }
 
             checkpunctuationBef(TextBefore);
-            bool t = checkpunctuationAft(TextAfter, &hascom, fulltext);//如果有中文标点符号错误返回true
-
+            checkwriter(TextBefore, fulltext);
+            bool HavingWrongPunctuation = checkpunctuationAft(TextAfter, &hascom, fulltext);
             if (checkcomplete(TextBefore, TextAfter, fulltext))
                 return;
-            checkwriter(TextBefore, fulltext);
-            if (!t) checkyear(TextAfter, fulltext);
-            if (isCnRef)//对于中文参考文献，检查出版地和多余空格
+            if (!HavingWrongPunctuation)
             {
-                City(TextAfter, hascom, fulltext);
-                CheckspaceBef(TextBefore, fulltext);
-                CheckspaceAft(TextAfter, fulltext);
+                checkyear(TextAfter, fulltext);
+                if (isCnRef)//对于中文参考文献，检查出版地和多余空格
+                {
+                    City(TextAfter, hascom, fulltext);
+                    CheckspaceBef(TextBefore, fulltext);
+                    CheckspaceAft(TextAfter, fulltext);
+                }
+
+                else//对于英文参考文献，只查出版地
+                    CheckEngCity(TextAfter, fulltext);
             }
 
-            else//对于英文参考文献，只查出版地
-                CheckEngCity(TextAfter, fulltext);
+
 
         }
 
@@ -446,9 +459,6 @@ namespace PaperFormatDetection.Paperbase
             //checkpunctuation(fulltext, &hascom);
             checkyearN(fulltext);
             //  bool hasnum = hasNum(fulltext);
-
-
-
             string[] TextArr = Regex.Split(fulltext, @"\[\w*\]");
             string TextBefore = "";
             string TextAfter = "";
@@ -471,16 +481,18 @@ namespace PaperFormatDetection.Paperbase
                 }
                 TextAfter = TextArr[1];
             }
-
-            checkpunctuationBef(TextBefore);
-            checkpunctuationAft(TextAfter, &hascom, fulltext);
-
             if (checkcomplete(TextBefore, TextAfter, fulltext))
                 return;
+            checkpunctuationBef(TextBefore);
             checkwriter(TextBefore, fulltext);
+            bool HavingWrongPunctuation = checkpunctuationAft(TextAfter, &hascom, fulltext);
+            if (!HavingWrongPunctuation)
+            {
+                checkafterpoint(TextAfter, fulltext);
+            }
+
             if (isCnRef)
             {
-                //City(TextAfter, hascom, fulltext);
                 CheckspaceBef(TextBefore, fulltext);
                 CheckspaceAft(TextAfter, fulltext);
             }
@@ -528,21 +540,21 @@ namespace PaperFormatDetection.Paperbase
                     textAft = textArr[1];
                 }
             }
-            checkpunctuationBef(textBef);
-            bool t = checkpunctuationAft(textAft, &Hascom, fulltext);
             if (checkcomplete(textBef, textAft, fulltext))
                 return;
-
-            if (!t)
+            checkpunctuationBef(textBef);
+            checkwriter(textBef, fulltext);
+            bool HavingWrongPunctuantion = checkpunctuationAft(textAft, &Hascom, fulltext);
+            if (!HavingWrongPunctuantion)
             {
-                Match match = checkyearJ(textAft.Replace(" ", ""), fulltext);
-
-
-                checkwriter(textBef, fulltext);
+                Match match = checkyearJ(textAft, fulltext);
                 int AftLength = textAft.Length;
                 string txt = Tool.test();
 
                 checkafterpoint(textAft, fulltext);
+
+                // if (!Hascom)
+                //  return;
 
                 int colonP = selectcheckissue(textBef, textAft, fulltext, match);
                 if (colonP != 0)
@@ -551,14 +563,11 @@ namespace PaperFormatDetection.Paperbase
                     checkCorrectOfPageNumebr(textAft, fulltext, colonP);
                 }
             }
-
-
             if (isCnRef)
             {
                 CheckspaceBef(textBef, fulltext);
                 CheckspaceAft(textAft, fulltext);
             }
-
         }
 
         /*
@@ -597,25 +606,23 @@ namespace PaperFormatDetection.Paperbase
                     textAft = textArr[1];
                 }
             }
-
-            checkpunctuationBef(textBef);
-            checkpunctuationAft(textAft, &Hascom, fulltext);
-            checkafterpoint(textAft, fulltext);
-
             checkcomplete(textBef, textAft, fulltext);
-
+            checkpunctuationBef(textBef);
             checkwriter(textBef, fulltext);
-            checkyear(textAft, fulltext);
-            if (isCnRef)
+            bool HavingWrongPunctuation = checkpunctuationAft(textAft, &Hascom, fulltext);
+            if (!HavingWrongPunctuation)
             {
-                City(textAft, Hascom, fulltext);
-                CheckspaceBef(textBef, fulltext);
-                CheckspaceAft(textAft, fulltext);
+                checkafterpoint(textAft, fulltext);
+                checkyear(textAft, fulltext);
+                if (isCnRef)
+                {
+                    City(textAft, Hascom, fulltext);
+                    CheckspaceBef(textBef, fulltext);
+                    CheckspaceAft(textAft, fulltext);
+                }
+                else
+                    CheckEngCity(textAft, fulltext);
             }
-            else
-                CheckEngCity(textAft, fulltext);
-
-
         }
         /*
          * 学位论文类型检测方法
@@ -651,26 +658,30 @@ namespace PaperFormatDetection.Paperbase
                     textAft = textArr[1];
                 }
             }
-            checkpunctuationBef(textBef);
-            checkpunctuationAft(textAft, &Hascom, fulltext);
-
             checkcomplete(textBef, textAft, fulltext);
-
+            checkpunctuationBef(textBef);
             checkwriter(textBef, fulltext);
-            checkyear(textAft, fulltext);
 
-            if (isCnRef)
+            bool HavingWrongPunctuation = checkpunctuationAft(textAft, &Hascom, fulltext);
+            if (!HavingWrongPunctuation)
             {
+                checkyear(textAft, fulltext);
 
-                checkschool(textAft, fulltext);
+                if (isCnRef)
+                {
 
-                City(textAft, Hascom, fulltext);
-                CheckspaceBef(textBef, fulltext);
-                CheckspaceAft(textAft, fulltext);
+                    checkschool(textAft, fulltext);
+
+                    City(textAft, Hascom, fulltext);
+                    CheckspaceBef(textBef, fulltext);
+                    CheckspaceAft(textAft, fulltext);
+                }
+
+                else
+                    CheckEngCity(textAft, fulltext);
             }
 
-            else
-                CheckEngCity(textAft, fulltext);
+
 
 
 
@@ -718,26 +729,29 @@ namespace PaperFormatDetection.Paperbase
                     textAft = textArr[1];
                 }
             }
-            checkpunctuationBef(textBef);
-            checkpunctuationAft(textAft, &Hascom, fulltext);
-
             checkcomplete(textBef, textAft, fulltext);
-            checkwriter(textBef, fulltext);
-
-
-
-            if (!isCnRef)
+            checkpunctuationBef(textBef);
+            bool HavingWrongPunctuation = checkpunctuationAft(textAft, &Hascom, fulltext);
+            if (!HavingWrongPunctuation)
             {
-                //英文作者首字母大写
-                checkfirstword(textBef, fulltext);
+                checkwriter(textBef, fulltext);
+                if (!isCnRef)
+                {
+                    //英文作者首字母大写
+                    checkfirstword(textBef, fulltext);
+                }
+
+                else
+                {
+                    CheckspaceBef(textBef, fulltext);
+                    CheckspaceAft(textAft, fulltext);
+
+                }
             }
 
-            else
-            {
-                CheckspaceBef(textBef, fulltext);
-                CheckspaceAft(textAft, fulltext);
 
-            }
+
+
 
 
             /* else
@@ -847,7 +861,7 @@ namespace PaperFormatDetection.Paperbase
 
         public void checkschool(string textAft, string fulltext)
         {
-            if (textAft.IndexOf("学院") < 0 && textAft.IndexOf("系") < 0)
+            if (textAft.IndexOf("学院") < 0 && textAft.IndexOf("系") < 0 && textAft.IndexOf("大学") < 0)
             {
                 Util.printError("参考文献缺少授学位单位（院或系）  ----" + fulltext.Substring(0, 10));
             }
@@ -870,14 +884,29 @@ namespace PaperFormatDetection.Paperbase
             if (colonP == 0)
             {
 
-                if (textAft.Substring(textAft.Length - 5).IndexOf("-") < 0 && textAft.Substring(textAft.Length - 5).IndexOf("~") < 0)
-                //既无：又无-的，认为是没有起止页
+                if (textAft.Length < 7)
                 {
-                    Util.printError("参考文献缺少起止页  ----" + fulltext.Substring(0, 10));
+                    if (textAft.IndexOf("-") < 0 && textAft.IndexOf("~") < 0)
+                    //既无：又无-的，认为是没有起止页
+                    {
+                        Util.printError("参考文献缺少起止页  ----" + fulltext.Substring(0, 10));
+                    }
+                    else
+                    {
+                        Util.printError("参考文献期号和起止页间未用英文标点符号“:”隔开  ----" + fulltext.Substring(0, 10));
+                    }
                 }
                 else
                 {
-                    Util.printError("参考文献期号和起止页间未用英文标点符号“:”隔开  ----" + fulltext.Substring(0, 10));
+                    if (textAft.Substring(textAft.Length - 7).IndexOf("-") < 0 && textAft.Substring(textAft.Length - 7).IndexOf("~") < 0)
+                    //既无：又无-的，认为是没有起止页
+                    {
+                        Util.printError("参考文献缺少起止页  ----" + fulltext.Substring(0, 10));
+                    }
+                    else
+                    {
+                        Util.printError("参考文献期号和起止页间未用英文标点符号“:”隔开  ----" + fulltext.Substring(0, 10));
+                    }
                 }
                 //return 0;
             }
@@ -1111,12 +1140,12 @@ namespace PaperFormatDetection.Paperbase
                 bool isnumber = false;
                 if (!reg.IsMatch(pageNumber1.Replace(" ", "")))
                 {
-                    Util.printError("参考文献开始页码不合法,应全为数字  ----" + fulltext.Substring(0, 10));
+                    Util.printError("参考文献开始页码不合法" + fulltext.Substring(0, 10));
                     isnumber = true;
                 }
                 if (!reg.IsMatch(pageNumber2.Replace(" ", "").Replace(".", "")))
                 {
-                    Util.printError("参考文献结束页码不合法，应全为数字  ----" + fulltext.Substring(0, 10));
+                    Util.printError("参考文献结束页码不合法" + fulltext.Substring(0, 10));
                     isnumber = true;
                 }
                 if (isnumber)
@@ -1157,6 +1186,11 @@ namespace PaperFormatDetection.Paperbase
             {
                 Util.printError("参考文献标志代码后的标点符号错误，应为“.”  ----" + fulltext.Substring(0, 10));
             }
+            //string noSpace = textAft.Replace(" ", "");
+            //if (noSpace[0]!='.')
+            //{
+            //    Util.printError("参考文献标志代码后标点符号错误，或缺少标点符号，应为英文的“.”  ----" + fulltext.Substring(0, 10));
+            //}
         }
 
         public void checkwriter(string TextBefore, string fulltext)
@@ -1218,49 +1252,93 @@ namespace PaperFormatDetection.Paperbase
 
         public Match checkyearJ(string paraText, string fulltext)
         {
+            paraText = paraText.Trim().Replace(" ", "");
+
             Match match = Regex.Match(paraText, @"[1-2][0-9][0-9][0-9]");
             Match pause = Regex.Match(paraText, ",");
             Match word = Regex.Match(paraText, "[A-Za-z\u4e00-\u9fa5]+");
-            if (match.Success && pause.Index + 1 == match.Index && pause.Index != 0)
+            Match pageNumber = Regex.Match(paraText, "[0-9]+-[0-9]+");
+            if (!word.Success)
+            {
+                Util.printError("参考文献缺少期刊名   ----" + fulltext.Substring(0, 10));
+                return null;
+            }
+            else if (match.Success && pageNumber.Success && (paraText[match.Index - 1] == ':' || pageNumber.Index == match.Index))//排除页码对年份定位的影响
+            {
+                Util.printError("参考文献缺少出版年份  ----" + paraText + fulltext.Substring(0, 10));
+                return null;
+            }
+
+            else if (match.Success)
             {
                 int year = Convert.ToInt32(match.Value);
                 DateTime now = DateTime.Now;
                 if (year > now.Year)
                 {
-                    Util.printError("参考文献出版年份超出当前年，不合法  ----" + fulltext.Substring(0, 10));
+                    Util.printError("参考文献出版年份超出当前年，不合法  ----" + paraText + fulltext.Substring(0, 10));
+
                 }
-                if (paraText[match.Index - 1] != ',' && ((int)paraText[match.Index - 1] > 127 || Char.IsNumber(paraText[match.Index - 1]) || Char.IsLetter(paraText[match.Index - 1])))
+                if (paraText[match.Index - 1] != ',')
                 {
-                    if (paraText[match.Index - 1] == '，')
-                        Util.printError("参考文献出版年份前的标点符号错误，应为英文的“,”  ----" + fulltext.Substring(0, 10));
-                    else
+                    Util.printError("参考文献出版年份前的标点符号应为英文的“,”  ----" + fulltext.Substring(0, 10));
 
-                        Util.printError("参考文献出版年份前缺少标点符号“,”  ----" + fulltext.Substring(0, 10));
-                }
-
-                /*  else if (paraText[match.Index - 1] == ' ')
-                  {
-                      Util.printError("年份前不应有空格：" + paraText);
-                  }*/
-
-                else if (paraText[match.Index - 2] == ',')
-                { }
-                else
-                {
-                    //Util.printError("参考文献出版年份前有多余空格或标点符号错误，应为“,”  ----" + fulltext.Substring(0, 10));
                 }
                 return match;
             }
-            else if (!word.Success)
-            {
-                Util.printError("参考文献缺少刊名   ----" + fulltext.Substring(0, 10));
-                return null;
-            }
-            else
-            {
-                Util.printError("参考文献缺少出版年份或年份前缺少英文逗号   ----" + fulltext.Substring(0, 10));
-                return null;
-            }
+            return null;
+            //if (match.Success&& pause.Index + 1==match.Index&&pause.Index!=0)
+            //{
+            //    int year = Convert.ToInt32(match.Value);
+            //    DateTime now = DateTime.Now;
+            //    if (year > now.Year)
+            //    {
+            //        Util.printError("参考文献出版年份超出当前年，不合法  ----" +paraText+fulltext.Substring(0, 10));
+
+            //    }
+
+
+            //    /*  if (paraText[match.Index - 1] != ',' && ((int)paraText[match.Index - 1] > 127 || Char.IsNumber(paraText[match.Index - 1])))
+            //      {
+            //          if (paraText[match.Index - 1] == '，')
+            //              Util.printError("年份前标点符号不应为中文的：" + paraText);
+
+            //          else
+            //              Util.printError("年份前缺少标点符号‘,’：" + paraText);
+            //      }
+
+            //      else if (paraText[match.Index - 1] == ' ')
+            //      {
+            //          Util.printError("年份前不应有空格：" + paraText);
+            //      }
+
+            //      }*/
+            //    if (paraText[match.Index - 1] != ',' && ((int)paraText[match.Index - 1] > 127 || Char.IsNumber(paraText[match.Index - 1]) || Char.IsLetter(paraText[match.Index - 1])))
+            //    {
+            //        if (paraText[match.Index - 1] == '，')
+            //            Util.printError("参考文献出版年份前的标点符号错误，应为英文的“,”  ----" + fulltext.Substring(0, 10));
+            //        else
+
+            //            Util.printError("参考文献出版年份前缺少标点符号“,”  ----" + fulltext.Substring(0, 10));
+            //    }
+
+            //    /*  else if (paraText[match.Index - 1] == ' ')
+            //      {
+            //          Util.printError("年份前不应有空格：" + paraText);
+            //      }*/
+
+            //    else if (paraText[match.Index - 2] == ',')
+            //    { }
+            //    else
+            //    {
+            //        //Util.printError("参考文献出版年份前有多余空格或标点符号错误，应为“,”  ----" + fulltext.Substring(0, 10));
+            //    }
+            //    return match;
+            //}
+            //else
+            //{
+            //    Util.printError("参考文献缺少出版年份或年份前缺少英文逗号   ----" + fulltext.Substring(0, 10));
+            //    return null;
+            //}
         }
 
         public void City(string TextAfter, bool Hascom, string fulltext)
@@ -1286,13 +1364,13 @@ namespace PaperFormatDetection.Paperbase
                     //缺标点符号“.”
                     if (TextAfter.Replace(" ", "")[0] > 127 && TextAfter.Replace(" ", "")[0] != '．' && (TextAfter.Replace(" ", "").IndexOf(':') == 2 || TextAfter.Replace(" ", "").IndexOf(':') == 3))
                     {
-                        Util.printError("参考文献标志代码后缺少标点符号“.”  ----" + fulltext.Substring(0, 10));
+                        //Util.printError("参考文献标志代码后缺少标点符号“.”  ----" + fulltext.Substring(0, 10));
                     }
 
                     //不缺标点符号  但是是错误的
                     else if (TextAfter.Replace(" ", "").IndexOf(':') == 3 || TextAfter.Replace(" ", "").IndexOf(':') == 4)
                     {
-                        Util.printError("参考文献标志代码后标点符号错误，应为“.”  ----" + fulltext.Substring(0, 10));
+                        //Util.printError("参考文献标志代码后标点符号错误，应为“.”  ----" + fulltext.Substring(0, 10));
                     }
 
                     else
@@ -1392,23 +1470,6 @@ namespace PaperFormatDetection.Paperbase
 
             }
 
-            /*结尾的.*/
-
-            /*if (paraText.Trim()[paraText.Trim().Length - 1] != '.' && (paraText.Trim()[paraText.Trim().Length - 1] > 127 || Char.IsNumber(paraText.Trim()[paraText.Trim().Length - 1])))
-            {
-                Util.printError("参考文献未以英文句点结尾  ----" + paraText.Substring(0, 10));
-
-            }
-
-            else if (paraText.Trim()[paraText.Trim().Length - 1] != '.')
-            {
-                if (paraText.Trim()[paraText.Trim().Length - 1] == '．')
-                { }
-                // Util.printError("参考文献未以英文句点结尾  ----" + paraText.Substring(0, 10));
-                else
-
-                    Util.printError("参考文献未以英文句点结尾  ----" + paraText.Substring(0, 10));
-            }*/
 
 
         }
@@ -1420,13 +1481,15 @@ namespace PaperFormatDetection.Paperbase
             {
                 if (paraText[i] == '，')
                 {
+                    t = true;
+
                     Util.printError("参考文献中的标点符号错误，应为英文的“,”   ----" + fulltext.Substring(0, 10));
+                }
+                if (paraText[i] == '．')
+                {
+                    Util.printError("参考文献中的标点符号错误，应为英文的“.”   ----" + paraText.Substring(0, 10));
                     t = true;
                 }
-                //if (paraText[i] == '．')
-                //{
-                //    Util.printError("参考文献中的标点符号错误，应为英文的“.”   ----" + paraText.Substring(0, 10));
-                //}
                 if (paraText[i] == '：')
                 {
                     Util.printError("参考文献中的标点符号错误，应为英文的“:”   ----" + fulltext.Substring(0, 10));
@@ -1443,39 +1506,75 @@ namespace PaperFormatDetection.Paperbase
 
                 if (paraText[i] == '。')
                 {
+
                     Util.printError("参考文献中的标点符号错误，应为英文的“.”   ----" + fulltext.Substring(0, 10));
+                    t = true;
+
                 }
+
 
                 if (paraText[i] == '（')
                 {
+
                     Util.printError("参考文献中的标点符号错误，应为英文的“(”   ----" + fulltext.Substring(0, 10));
+                    t = true;
+
                 }
                 if (paraText[i] == '）')
                 {
                     Util.printError("参考文献中的标点符号错误，应为英文的“)”   ----" + fulltext.Substring(0, 10));
+                    t = true;
+
                 }
 
 
             }
 
             /*结尾的.*/
-
-            if (paraText.Trim()[paraText.Trim().Length - 1] != '.' && (paraText.Trim()[paraText.Trim().Length - 1] > 127 || Char.IsNumber(paraText.Trim()[paraText.Trim().Length - 1])))
+            if (paraText.Replace(" ", "").IndexOf("致谢") > 0)
             {
-                Util.printError("参考文献未以英文句点结尾  ----" + fulltext.Substring(0, 10));
+                if (paraText.Replace(" ", "")[paraText.Replace(" ", "").IndexOf("致谢") - 1] != '.')
+                {
+                    Util.printError("参考文献未以英文句号结尾  ----" + fulltext.Substring(0, 10));
 
+                }
+                //Util.printError(paraText);
+                return t;
             }
-
-            else if (paraText.Trim()[paraText.Trim().Length - 1] != '.')
+            else if (paraText.Replace(" ", "").IndexOf("附录") > 0)
             {
-                if (paraText.Trim()[paraText.Trim().Length - 1] == '．')
-                { }
-                // Util.printError("参考文献未以英文句点结尾  ----" + paraText.Substring(0, 10));
-                else
+                if (paraText.Replace(" ", "")[paraText.Replace(" ", "").IndexOf("附录") - 1] != '.')
+                {
+                    Util.printError("参考文献未以英文句号结尾  ----" + fulltext.Substring(0, 10));
 
-                    Util.printError("参考文献未以英文句点结尾  ----" + fulltext.Substring(0, 10));
+                }
+                //Util.printError(paraText);
+                return t;
+            }
+            if (fulltext.Replace(" ", "")[fulltext.Replace(" ", "").Length - 1] != '.')
+            {
+                Util.printError("参考文献未以英文句号结尾  ----" + fulltext.Substring(0, 10));
+
             }
             return t;
+            //else if (paraText.Trim()[paraText.Trim().Length - 1] != '.' && 
+            //    (paraText.Trim()[paraText.Trim().Length - 1] > 127 ||
+            //    Char.IsNumber(paraText.Trim()[paraText.Trim().Length - 1])))
+            //{
+            //    Util.printError("参考文献未以英文句点结尾  ----" + fulltext.Substring(0, 10));
+
+            //}
+
+            //else if (paraText.Trim()[paraText.Trim().Length - 1] != '.')
+            //{
+            //    if (paraText.Trim()[paraText.Trim().Length - 1] == '．')
+            //    { }
+            //    // Util.printError("参考文献未以英文句点结尾  ----" + paraText.Substring(0, 10));
+            //    else
+
+            //        Util.printError("参考文献未以英文句点结尾  ----" + fulltext.Substring(0, 10));
+            //}
+
 
         }
 
@@ -1489,7 +1588,7 @@ namespace PaperFormatDetection.Paperbase
                 {
                     /* if (paraText.Trim().Substring(paraText.Trim().Length - 1, 1) == "." && )
                      { }*/
-                    // Util.printError("参考文献出版年份位置错误或年份后有其他多余内容，应以年份结尾  ----" + fulltext.Substring(0, 10));
+                    //Util.printError("参考文献出版年份位置错误或年份后有其他多余内容，应以年份结尾  ----" + fulltext.Substring(0, 10));
                 }
                 int year = Convert.ToInt32(match.Value);
                 DateTime now = DateTime.Now;
@@ -1502,6 +1601,8 @@ namespace PaperFormatDetection.Paperbase
 
                 if (paraText[match.Index - 1] != ',' && ((int)paraText[match.Index - 1] > 127 || Char.IsNumber(paraText[match.Index - 1]) || Char.IsLetter(paraText[match.Index - 1])))
                 {
+
+
                     if (paraText[match.Index - 1] == '，')
                     {
                         // Util.printError("参考文献出版年份前标点符号错误，应为英文的“,”  ----" + fulltext.Substring(0, 10));
@@ -1544,6 +1645,7 @@ namespace PaperFormatDetection.Paperbase
                 if (year > now.Year)
                 {
                     Util.printError("参考文献出版年份超出当前年，不合法  ----" + paraText.Substring(0, 10));
+
                 }
                 checkmonthN(paraText, match);
 
@@ -1763,7 +1865,6 @@ namespace PaperFormatDetection.Paperbase
                 IEnumerable<Run> runs = para.Elements<Run>();
                 List<Run> Psrunlist = runs.ToList<Run>();
                 int runn = -1;
-
                 foreach (Run run in runs)
                 {
                     runn++;
@@ -1776,9 +1877,11 @@ namespace PaperFormatDetection.Paperbase
                             if (match.Success)
                             {
                                 int index = match.Value.IndexOf('-');
-                                if (index == -1)//角标内只有一个数字的情况
+                                //角标内只有一个数字的情况
+                                if (index == -1)
                                 {
-                                    if (flagover)//若上个角标已超参考文献总数目，则从现在的角标数开始（这只是方法之一，我没想到能保证完全正确的方法）
+                                    //若上个角标已超参考文献总数目，则从现在的角标数开始（这只是方法之一，我没想到能保证完全正确的方法）
+                                    if (flagover)
                                     {
                                         maxnumber = Convert.ToInt16(runText.Substring(match.Index + 1, match.Length - 2)) - 1;
                                         flagover = false;
@@ -1846,7 +1949,7 @@ namespace PaperFormatDetection.Paperbase
                             else if (runText.IndexOf("[") != -1)//整个角标可能分散在两个run里，先拼凑，之后的检查跟上面一样
                             {
                                 int num = runn + 1, i = 0;
-                                while (i < 100 && Psrunlist[num].RunProperties != null && Psrunlist[num].RunProperties.VerticalTextAlignment != null)
+                                while (i < 5 && Psrunlist[num].RunProperties != null && Psrunlist[num].RunProperties.VerticalTextAlignment != null)
                                 {
                                     if (Psrunlist[num].RunProperties.VerticalTextAlignment.Val != null)
                                     {
@@ -1855,6 +1958,10 @@ namespace PaperFormatDetection.Paperbase
                                             runText += Psrunlist[num].InnerText;
                                             num++;
                                         }
+                                    }
+                                    if (num >= Psrunlist.Count)
+                                    {
+                                        break;
                                     }
                                     i++;
                                 }
@@ -1961,11 +2068,6 @@ namespace PaperFormatDetection.Paperbase
                                             Util.printError("参考文献角标[m-n]中的n超过总参考文献数目  ----" + para.InnerText.Substring(0, 10));
                                             continue;
                                         }
-                                        if (Convert.ToInt16(number1) > maxnumber)
-                                        {
-                                            Util.printError("参考文献角标[m-n]中的m不应大于n  ----" + para.InnerText.Substring(0, 10));
-
-                                        }
                                     }
 
                                     runText = null;
@@ -1984,7 +2086,6 @@ namespace PaperFormatDetection.Paperbase
                 }
 
                 p = para;
-
             }
             if (maxnumber < RefCount - 1)
             {
