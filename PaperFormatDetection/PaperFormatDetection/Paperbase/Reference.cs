@@ -552,7 +552,7 @@ namespace PaperFormatDetection.Paperbase
                 string txt = Tool.test();
 
                 checkafterpoint(textAft, fulltext);
-
+                checkIssue(textAft, fulltext);
                 // if (!Hascom)
                 //  return;
 
@@ -866,6 +866,7 @@ namespace PaperFormatDetection.Paperbase
                 Util.printError("参考文献缺少授学位单位（院或系）  ----" + fulltext.Substring(0, 10));
             }
         }
+
         public int selectcheckissue(string textBef, string textAft, string fulltext, Match match)
         {
 
@@ -961,7 +962,7 @@ namespace PaperFormatDetection.Paperbase
             else if (!Findissue)
             {
 
-                Util.printError("参考文献缺少出版期号  ----" + fulltext.Substring(0, 10));
+                //Util.printError("参考文献缺少出版期号  ----" + fulltext.Substring(0, 10));
 
             }
 
@@ -1249,7 +1250,46 @@ namespace PaperFormatDetection.Paperbase
             }
             return lack;
         }
+        public void checkIssue(string textaft, string fulltext)
+        {
+            textaft = textaft.Replace(" ", "");
+            Match Issue = Regex.Match(textaft, @"\(\d+\)");
+            string s = "";
+            int index = 0;
+            if (!Issue.Success)
+            {
+                Util.printError("参考文献缺少出版期号   ----" + fulltext.Substring(0, 10));
 
+            }
+            else
+            {
+                //检查卷号是否正确（一般100以内）
+                index = Issue.Index - 1;
+                int i = 0;
+                while (i < 4 && index > -1 && Regex.IsMatch(textaft[index].ToString(), @"\d"))
+                {
+
+                    s += textaft[index].ToString();
+                    i++;
+                    index--;
+                }
+
+                int a = int.Parse(s);
+                if (a > 1600 && a < 2100)
+                {
+                    Util.printError("参考文献年份和期号之间未用英文逗号隔开   ----" + fulltext.Substring(0, 10));
+
+                }
+                else if (a > 300)
+                {
+                    Util.printError("参考文献卷号过大   ----" + fulltext.Substring(0, 10));
+                    Util.printError("卷号为   ----" + s);
+
+                }
+
+            }
+
+        }
         public Match checkyearJ(string paraText, string fulltext)
         {
             paraText = paraText.Trim().Replace(" ", "");
@@ -1500,7 +1540,7 @@ namespace PaperFormatDetection.Paperbase
                 if (paraText[i] == ':')
                 {
                     *Hascom = true;
-                    t = true;
+
 
                 }
 
